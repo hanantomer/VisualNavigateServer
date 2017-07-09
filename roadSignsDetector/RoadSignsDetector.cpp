@@ -19,49 +19,43 @@ RoadSignsDetector::RoadSignsDetector()
 {
 }
 
-
-
-void RoadSignsDetector::Run(string imageFileName)
+vector<SimpleCircle> RoadSignsDetector::FindCircles(Mat &src)
 {
-	SignMatcher *signMatcher = new SignMatcher();
-
-	// source
-	Mat  src = imread(imageFileName);
-	
-	//cv::resize(src, src, cv::Size(), 0.5, 0.5);
-
-	//cv::namedWindow("src", WINDOW_AUTOSIZE);
-	//cv::imshow("src", src);
-
 	Mat maskCombinedBlack;
 	Mat whiteCloseToBlack;
 	Mat whiteCloseToBlackExtended;
-	utils::GetEdgePoints(src, whiteCloseToBlack, whiteCloseToBlackExtended, maskCombinedBlack);
-	
 
-	cv::namedWindow("w1", WINDOW_AUTOSIZE);
-	cv::imshow("w1", whiteCloseToBlack);
+	utils::GetEdgePoints(src, whiteCloseToBlack, whiteCloseToBlackExtended, maskCombinedBlack);
+//	utils::DisplayMat(whiteCloseToBlack, "whiteCloseToBlack");
 
 	Mat whiteCloseToBlackFiltered = whiteCloseToBlack.clone();
-
 	utils::FilterByDensity(whiteCloseToBlackFiltered, filterSquareSize);
+//	utils::DisplayMat(whiteCloseToBlackFiltered, "whiteCloseToBlackFiltered");
 
-	cv::namedWindow("w2", WINDOW_AUTOSIZE);
-	cv::imshow("w2", whiteCloseToBlackFiltered);
-
-	
 	SignCircleFinder *signCircleFinder = new SignCircleFinder();
 	vector<SimpleCircle> signCircles = signCircleFinder->FindCircleSigns(whiteCloseToBlackFiltered, whiteCloseToBlack, whiteCloseToBlackExtended, maskCombinedBlack, src);
 
-	Mat srcForCircleExtraction = src.clone();
+	return signCircles;
+}
 
+Mat3b RoadSignsDetector::CreateResultMatrix(Mat &src)
+{
 	Mat3b res(src.rows, src.cols, Vec3b(0, 0, 0));
 
 	src.copyTo(res(Rect(0, 0, src.cols, src.rows)));
 
+	return res;
+}
+
+void RoadSignsDetector::DisplaySigns(Mat &src, Mat &res, vector<SimpleCircle> &signCircles, string &imageFileName)
+{
+
+	Mat srcForCircleExtraction = src.clone();
+
+
 	for (size_t i = 0; i < signCircles.size(); i++)
 	{
-		
+
 		if (signCircles.at(i).center.x - signCircles.at(i).radius < 0)			// top
 			continue;
 
@@ -76,7 +70,7 @@ void RoadSignsDetector::Run(string imageFileName)
 
 		circle(src, cv::Point(signCircles.at(i).center.x, signCircles.at(i).center.y), signCircles.at(i).radius, Scalar(255, 255, 255));
 
-		
+
 		if (i < 10)
 		{
 
@@ -87,12 +81,9 @@ void RoadSignsDetector::Run(string imageFileName)
 
 			string circleFileName = imageFileName + "_cicle" + to_string(i) + ".bmp";
 
+			SignMatcher *signMatcher = new SignMatcher();
+
 			SignRef matchedSign = signMatcher->GetMatchedSign(circ, i);
-
-
-
-			//remove(circleFileName.c_str());
-			//imwrite(circleFileName, circ);
 
 			if (matchedSign.score >= minSignMatch)
 			{
@@ -101,26 +92,29 @@ void RoadSignsDetector::Run(string imageFileName)
 		}
 	}
 
-	//cv::resize(src, src, cv::Size(), 0.25, 0.25);
+	//utils::DisplayMat(src, "srcCircles");
 
-	cv::namedWindow("srcCircles", WINDOW_AUTOSIZE);
-	cv::imshow("srcCircles", src);
 
 	cv::resize(res, res, cv::Size(), 0.5, 0.5);
-
-	cv::namedWindow("final", WINDOW_AUTOSIZE);
-	cv::imshow("final", res);
+	utils::DisplayMat(res, "final");
 
 
 	// write
 	string convertedFileName = imageFileName + "_signs.bmp";
+	utils::SaveFile(convertedFileName, res);
+}
 
-	remove(convertedFileName.c_str());
-	imwrite(convertedFileName, src);
-	
+void RoadSignsDetector::Run(string imageFileName)
+{
+	Mat  src = imread(imageFileName);
+
+	vector<SimpleCircle> signCircles =	this->FindCircles(src);
+
+	Mat3b res = this->CreateResultMatrix(src);
+
+	this->DisplaySigns(src, res, signCircles, imageFileName);
 
 	waitKey(0);
-
 }
 
 

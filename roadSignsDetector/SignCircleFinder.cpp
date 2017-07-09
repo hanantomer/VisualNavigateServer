@@ -1,27 +1,4 @@
 
-/*
-1. LOOP over each 1th row loop from left to right
-2. foreach point, 
-	2.1. find point to the right far to near
-		2.1.1. foreach right point
-			2.1.1.1	find point down far to near
-			2.1.1.2	foreach point
-				2.1.1.2.1 outline a circle, clac exact points and store
-
-	2.2 if circle with more than 10 spreaded points not found, find point down far to near
-		2.2.1. foreach down point
-			2.2.1.1	find point right far to near
-			2.2.1.2	foreach point
-				2.2.1.2.1 outline a circle, clac exact points and store
-
-	2.3 if circle found, add a square to array of squares(from_x to_x, from_y to_y) omit squares zone from the search
-	2.4 consider ommiting double of the square horizontal size of each square
-3. for overlapped circles, choose the one with more points 
-
-
-
-*/
-
 #include "opencv2/imgproc.hpp"
 #include "global.h"
 #include "SignCircleFinder.h"

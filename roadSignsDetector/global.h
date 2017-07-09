@@ -58,6 +58,19 @@ class utils
 {
 public:
 
+	static void DisplayMat(Mat &mat, string windowMame)
+	{
+		cv::namedWindow(windowMame, WINDOW_AUTOSIZE);
+		cv::imshow(windowMame, mat);
+	}
+
+
+	static void SaveFile(string &fileName, Mat &mat)
+	{
+		remove(fileName.c_str());
+		imwrite(fileName, mat);
+	}
+
 	static Mat GetMaskCombinedBlack(Mat &src)
 	{
 		Mat hsv;
@@ -69,12 +82,10 @@ public:
 		Scalar fromScalarBlack = Scalar(0, 0, 0);
 		Scalar toScalarBlack = Scalar(180, 255, 90);
 
-		Mat maskRed, maskBlack;
-
+		Mat maskRed;
 		cv::inRange(hsv, fromScalarRed, toScalarRed, maskRed);
-//		cv::inRange(hsv, fromScalarBlack, toScalarBlack, maskBlack);
 
-		return maskRed | maskBlack;
+		return maskRed;
 	}
 
 	static Mat GetMaskCombinedWhite(Mat &src)
@@ -97,8 +108,8 @@ public:
 		maskCombinedBlack =
 			GetMaskCombinedBlack(src);
 
-		cv::namedWindow("maskCombinedBlack", WINDOW_AUTOSIZE);
-		cv::imshow("maskCombinedBlack", maskCombinedBlack);
+		//cv::namedWindow("maskCombinedBlack", WINDOW_AUTOSIZE);
+		//cv::imshow("maskCombinedBlack", maskCombinedBlack);
 
 		Mat maskCombinedWhite =
 			GetMaskCombinedWhite(src);
