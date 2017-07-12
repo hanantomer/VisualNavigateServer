@@ -170,6 +170,7 @@
     <ClInclude Include="LogWrapper.h" />
     <ClInclude Include="RoadSignsDetector.h" />
     <ClInclude Include="SignMatcher.h" />
+    <ClInclude Include="CircleFromTriangleCalculator.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -179,6 +180,7 @@
     <ClCompile Include="RoadSignsDetector.cpp" />
     <ClCompile Include="SignMatcher.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="CircleFromTriangleCalculator.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

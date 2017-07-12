@@ -12,8 +12,6 @@ using namespace std;
 using namespace cv;
 
 #pragma once
-
-#pragma once
 struct SimplePoint
 {
 	int x;
@@ -51,6 +49,9 @@ struct SignRef
 	cv::Mat matStereo;
 	float score;
 };
+
+const int maxCircleRadius = 75;
+const int minCircleRadius = 40;
 
 
 #pragma once
@@ -610,43 +611,3 @@ public:
 
 
 
-/*
-SimpleCircle currentCircle = circle;;
-SimpleCircle bestCircle = circle;
-int maxNumOfPoints = 0;
-int lastMaxNumOfPoints = 0;
-
-for (size_t r = circle.radius + radiusUpperBound; r >= circle.radius; r--)
-{
-currentCircle.radius = r;
-
-lastMaxNumOfPoints = maxNumOfPoints;
-
-for (size_t xPos = left; xPos < right; xPos ++)
-{
-for (size_t yPos = top; yPos < bottom; yPos ++)
-{
-currentCircle.center.x = xPos;
-currentCircle.center.y = yPos;
-
-int numOfPoints = GetCirclePoints(currentCircle, bwMat);
-
-if (numOfPoints > maxNumOfPoints)
-{
-maxNumOfPoints = numOfPoints;
-bestCircle.center.x = currentCircle.center.x;
-bestCircle.center.y = currentCircle.center.y;
-bestCircle.radius = currentCircle.radius;
-}
-}
-}
-
-// assume linear impact so when we dot get better match, stop
-if (lastMaxNumOfPoints == maxNumOfPoints)
-break;
-
-lastMaxNumOfPoints = maxNumOfPoints;
-}
-
-return bestCircle;
-*/
