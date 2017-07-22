@@ -11,25 +11,23 @@
 using namespace cv;
 
 
-SignCircleFinder::SignCircleFinder()
+SignCircleFinder::SignCircleFinder(Mat source, string sourceImageFileName)
 {
+	this->sourceImageFileName = sourceImageFileName;
+	this->source = source;
 }
 
 SignCircleFinder::~SignCircleFinder()
 {
 }
 
-vector<SimpleCircle> SignCircleFinder::FindCircleSigns(Mat &whiteCloseToBlackFiltered, Mat &whiteCloseToBlack, Mat &whiteCloseToBlackExtended, Mat &maskCombinedBlack, Mat &source)
+vector<SimpleCircle> SignCircleFinder::Run()
 {
-
-	vector<SimpleCircle> circleCandidates;
+	this->CreateExtendedMatrixes();
 	
-	std::map<int, bool*> whiteRowsFiltered = utils::GetMatRows(whiteCloseToBlackFiltered);
+	vector<SimpleCircle> circleCandidates;
 
-	std::map<int, bool*> whiteRows = utils::GetMatRows(whiteCloseToBlackFiltered);
-
-	vector<SimpleCircle> squareSimpleCircles = 
-		FindCircles(whiteRowsFiltered, whiteRows, whiteCloseToBlackFiltered, whiteCloseToBlack, whiteCloseToBlackExtended);
+	vector<SimpleCircle> squareSimpleCircles = this->FindCircles();
 
 	for (size_t i = 0; i < squareSimpleCircles.size(); i++)
 	{
@@ -42,18 +40,37 @@ vector<SimpleCircle> SignCircleFinder::FindCircleSigns(Mat &whiteCloseToBlackFil
 
 		int rowStart = circleCandidates.at(i).center.y - circleCandidates.at(i).radius;
 
-		circleCandidates.at(i) =
-			CalibrateCircle(circleCandidates.at(i), maskCombinedBlack, source);
+		if (doCalibrate)
+		{
+			circleCandidates.at(i) =
+				utils::CalibrateCircle(circleCandidates.at(i), maskCombinedBlack, source, SIGN_FRAME_RELATIVE_WIDTH);
+		}
 	}
 
-	if(doFilter)
-		return circleCandidates;
-	
-	return circleCandidates;
 
+	return circleCandidates;
 }
 
-vector<SimpleCircle> SignCircleFinder::FindCircles(map<int, bool*> &whiteRowsFiltered, map<int, bool*> &whiteRows, Mat whiteCloseToBlackFiltered, Mat whiteCloseToBlack, Mat whiteCloseToBlackExtended)
+void SignCircleFinder::CreateExtendedMatrixes()
+{
+
+	utils::GetEdgePoints(this->source, this->whiteCloseToBlack, this->whiteCloseToBlackExtended, this->maskCombinedBlack);
+
+	this->whiteCloseToBlackFiltered = this->whiteCloseToBlack.clone();
+
+	utils::FilterByDensity(this->whiteCloseToBlackFiltered, this->filterSquareSize);
+
+	this->whiteRowsFiltered = utils::GetMatRows(this->whiteCloseToBlackFiltered);
+
+	this->whiteRows = utils::GetMatRows(this->whiteCloseToBlackFiltered);
+
+	utils::SaveFile(string("whiteCloseToBlack.png"), this->whiteCloseToBlack, this->sourceImageFileName);
+	utils::SaveFile(string("whiteCloseToBlackExtended.png"), this->whiteCloseToBlackExtended, this->sourceImageFileName);
+	utils::SaveFile(string("maskCombinedBlack.png"), this->maskCombinedBlack, this->sourceImageFileName);
+	utils::SaveFile(string("whiteCloseToBlackFiltered.png"), this->whiteCloseToBlackFiltered, this->sourceImageFileName);
+}
+
+vector<SimpleCircle> SignCircleFinder::FindCircles()
 {
 	vector<SimpleCircle> circleCandidates;
 
@@ -61,14 +78,18 @@ vector<SimpleCircle> SignCircleFinder::FindCircles(map<int, bool*> &whiteRowsFil
 
 	std::map<int, bool*> usedPoints;
 
-	for(matRows::iterator itFiltered = whiteRowsFiltered.begin(); itFiltered != whiteRowsFiltered.end(); itFiltered++)
+	matRows::iterator itFiltered = whiteRowsFiltered.begin();
+
+	for (int i = 0; i < whiteRowsFiltered.size() - 5; i++)
 	{
+		itFiltered++;
+
 		int row = itFiltered->first;
 
 		SimpleCircle simpleCircle = 
 			GetRowCircle(row, itFiltered->second, whiteRows, whiteCloseToBlack, whiteCloseToBlackExtended, usedPoints);
 
-		if (simpleCircle.radius > 0)
+		if (simpleCircle.radius > 0 && simpleCircle.points > 0)
 		{
 			StoreCircle(simpleCircle, circleCandidates);
 		}
@@ -166,6 +187,8 @@ SimpleCircle SignCircleFinder::GetRowCircle(int  row, bool* xArrFiltered, map<in
 					if (simpleCircle.radius > 0)
 					{
 						int circlePoints = utils::GetCirclePoints(simpleCircle, whiteCloseToBlackExtended);
+
+						simpleCircle.points = 0;
 					
 						if (circlePoints >= min_cicle_points)
 						{
@@ -236,24 +259,6 @@ vector<SimplePoint>  SignCircleFinder::GetTupleNextYPoints( int nextXStart, int 
 	return pointArr;
 }
 
-
-
-bool SignCircleFinder::CircleIsMatched(SimpleCircle circle1, SimpleCircle circle2)
-{
-
-	if (abs(circle1.center.x - circle2.center.x) > circle_match_threshold)
-		return false;
-
-	if (abs(circle1.center.y - circle2.center.y) > circle_match_threshold)
-		return false;
-
-	if (abs(circle1.radius - circle2.radius) > circle_match_threshold)
-		return false;
-
-
-	return true;
-}
-
 void SignCircleFinder::StoreCircle(SimpleCircle circle, vector<SimpleCircle> &circleCandidates)
 {
 	if (!doMatchNearCircles)
@@ -282,8 +287,7 @@ void SignCircleFinder::StoreCircle(SimpleCircle circle, vector<SimpleCircle> &ci
 			}
 			else if (CircleIsMatched(circle, circleCandidates.at(i)))
 			{
-				//ConsolidateCircle(circle, circleCandidates.at(i));
-				//circleCandidates.at(i).count++;
+
 				circleCandidates.at(i) = ChooseCircleWithMorePoints(circle, circleCandidates.at(i));
 				matchFound = true;
 			}
@@ -294,16 +298,20 @@ void SignCircleFinder::StoreCircle(SimpleCircle circle, vector<SimpleCircle> &ci
 	}
 }
 
-void SignCircleFinder::ConsolidateCircle(SimpleCircle &sourceCircle, SimpleCircle &targetCircle)
+bool SignCircleFinder::CircleIsMatched(SimpleCircle circle1, SimpleCircle circle2)
 {
-	targetCircle.radius =
-		(sourceCircle.radius + targetCircle.radius * targetCircle.points) / (targetCircle.points + 1);
 
-	targetCircle.center.x =
-		(sourceCircle.center.x + targetCircle.center.x * targetCircle.points) / (targetCircle.points + 1);
+	if (abs(circle1.center.x - circle2.center.x) > circle_match_threshold)
+		return false;
 
-	targetCircle.center.y =
-		(sourceCircle.center.y + targetCircle.center.y * targetCircle.points) / (targetCircle.points + 1);
+	if (abs(circle1.center.y - circle2.center.y) > circle_match_threshold)
+		return false;
+
+	if (abs(circle1.radius - circle2.radius) > circle_match_threshold)
+		return false;
+
+
+	return true;
 }
 
 SimpleCircle SignCircleFinder::ChooseCircleWithMorePoints(SimpleCircle &sourceCircle, SimpleCircle &targetCircle)
@@ -311,21 +319,7 @@ SimpleCircle SignCircleFinder::ChooseCircleWithMorePoints(SimpleCircle &sourceCi
 	return sourceCircle.points > targetCircle.points ? sourceCircle : targetCircle;
 }
 
-SimpleCircle SignCircleFinder::CalibrateCircle(SimpleCircle circle, Mat &maskCombinedBlack, Mat &source)
-{
-	if (!doCalibrate)
-		return circle;
-
-	int left = max(0, circle.center.x - position_calibration_threshold);
-	int right = circle.center.x + position_calibration_threshold;
-	int top = max(0, circle.center.y - position_calibration_threshold);
-	int bottom = circle.center.y + position_calibration_threshold;
-
-	SimpleCircle calibratedCircle = 
-		utils::CalibrateCircle(circle, maskCombinedBlack, source, SIGN_FRAME_RELATIVE_WIDTH);
-
-	return calibratedCircle;
-}
+	
 
 
 

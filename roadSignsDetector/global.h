@@ -6,6 +6,8 @@
 #include <vector>
 #include <map>
 #include <math.h>
+#include <boost/filesystem.hpp>
+
 #define _USE_MATH_DEFINES
 
 using namespace std;
@@ -59,17 +61,27 @@ class utils
 {
 public:
 
-	static void DisplayMat(Mat &mat, string windowMame)
+	static void DisplayMat(Mat mat, string windowMame)
 	{
+		Mat dsiplayMat = mat.clone();
+		while (dsiplayMat.cols > 1200 || dsiplayMat.rows > 900)
+		{
+			cv::resize(dsiplayMat, dsiplayMat, cv::Size(), 0.9, 0.9);
+		}
 		cv::namedWindow(windowMame, WINDOW_AUTOSIZE);
-		cv::imshow(windowMame, mat);
+		cv::imshow(windowMame, dsiplayMat);
 	}
 
 
-	static void SaveFile(string &fileName, Mat &mat)
+	static void SaveFile(string &fileName, Mat &mat, string saveToPath)
 	{
-		remove(fileName.c_str());
-		imwrite(fileName, mat);
+		boost::filesystem::path dir(saveToPath.c_str());
+		boost::filesystem::create_directory(dir.c_str());
+
+		string filePlusDir = saveToPath + "\\" + fileName;
+		
+		remove(filePlusDir.c_str());
+		imwrite(filePlusDir, mat);
 	}
 
 	static Mat GetMaskCombinedBlack(Mat &src)
@@ -129,6 +141,8 @@ public:
 		edgePointsExtended = result.clone();
 		
 		MarkEdgePoints(maskCombinedWhite, resultCopy, edgePointsExtended, 255, 255);
+
+		utils::DisplayMat(resultCopy, "whiteCloseToBlack");
 	}
 
 	static void MarkEdgePoints(Mat &sourceMask, Mat &targetMask, Mat &result, uchar sourceColor, uchar targetColor)
@@ -301,7 +315,7 @@ public:
 				}
 
 
-				if (whitePoints.size() < 3 || whitePoints.size() > 25)
+				if (/*whitePoints.size() < 3 ||*/ whitePoints.size() > 25)
 				{
 					utils::ResetPoints(whitePoints, mat);
 					continue;
@@ -317,6 +331,7 @@ public:
 				}
 			}
 		}
+		utils::DisplayMat(mat, "whiteCloseToBlackFiltered");
 	}
 
 	static std::map<int, bool*> GetMatRows(cv::Mat mat)

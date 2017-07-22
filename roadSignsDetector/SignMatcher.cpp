@@ -11,8 +11,9 @@
 
 namespace fs = boost::filesystem;
 
-SignMatcher::SignMatcher()
+SignMatcher::SignMatcher(string sourcImageFileName)
 {
+	this->sourcImageFileName = sourcImageFileName;
 	LoadReferenceSigns("C:\\RoadSigns\\Israel\\Circles");
 }
 
@@ -79,20 +80,12 @@ void SignMatcher::LoadReferenceSigns(std::string directory)
 
 				Mat signMatStereo = utils::GetMaskCombinedWhite(signMat);
 
-				//cv::namedWindow("signMatStereo" + sr.fileName, WINDOW_AUTOSIZE);
-				//cv::imshow("signMatStereo" + sr.fileName, signMatStereo);
-
-
 				sr.intensityChangeMatrix = GetIntensityChangeMatrix(signMatStereo);
 				sr.matStereo = signMatStereo;
 				sr.mat = signMat;
 				_referenceSigns.push_back(sr);
 
-				// write
-				//string signFileName = sr.fileName.substr(0, sr.fileName.find('.')) + "_stereo.png";
-				//remove(signFileName.c_str());
-				//imwrite(signFileName, signMatStereo);
-
+				utils::SaveFile(string("stereo.png"), signMatStereo, this->sourcImageFileName);
 			}
 			catch (Exception e)
 			{
@@ -125,12 +118,8 @@ SignRef SignMatcher::GetMatchedSign(Mat &sourceMat, int si)
 
 	Mat signMatStereo = utils::GetMaskCombinedWhite(sourceMat);
 
-	// write
 	string signFileName = "source" + to_string(sourceIndex) + "_stereo.png";
-	remove(signFileName.c_str());
-	imwrite(signFileName, signMatStereo);
-
-
+	utils::SaveFile(signFileName, signMatStereo, this->sourcImageFileName);
 
 	std::vector<std::vector<int>> sourceIntensityChangeMatrix = GetIntensityChangeMatrix(signMatStereo);
 

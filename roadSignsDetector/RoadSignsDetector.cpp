@@ -15,25 +15,33 @@ using namespace cv;
 using namespace std;
 
 
-RoadSignsDetector::RoadSignsDetector()
+RoadSignsDetector::RoadSignsDetector(std::string imageFilePath)
 {
+	this->sourceImage = imread(imageFilePath);
+
+	int fileNameStartPos = imageFilePath.rfind('\\');
+
+	this->sourceImageFileName = imageFilePath.substr(fileNameStartPos + 1);
 }
 
-vector<SimpleCircle> RoadSignsDetector::FindCircles(Mat &src)
+void RoadSignsDetector::Run()
 {
-	Mat maskCombinedBlack;
-	Mat whiteCloseToBlack;
-	Mat whiteCloseToBlackExtended;
+	vector<SimpleCircle> signCircles = this->FindCircles(this->sourceImage);
 
-	utils::GetEdgePoints(src, whiteCloseToBlack, whiteCloseToBlackExtended, maskCombinedBlack);
-//	utils::DisplayMat(whiteCloseToBlack, "whiteCloseToBlack");
+	Mat3b res = this->CreateResultMatrix(this->sourceImage);
 
-	Mat whiteCloseToBlackFiltered = whiteCloseToBlack.clone();
-	utils::FilterByDensity(whiteCloseToBlackFiltered, filterSquareSize);
-//	utils::DisplayMat(whiteCloseToBlackFiltered, "whiteCloseToBlackFiltered");
+	this->DisplaySigns(this->sourceImage, res, signCircles, sourceImageFileName);
 
-	SignCircleFinder *signCircleFinder = new SignCircleFinder();
-	vector<SimpleCircle> signCircles = signCircleFinder->FindCircleSigns(whiteCloseToBlackFiltered, whiteCloseToBlack, whiteCloseToBlackExtended, maskCombinedBlack, src);
+	waitKey(0);
+}
+
+
+
+vector<SimpleCircle> RoadSignsDetector::FindCircles(Mat &source)
+{
+	SignCircleFinder *signCircleFinder = new SignCircleFinder(source, this->sourceImageFileName);
+
+	vector<SimpleCircle> signCircles = signCircleFinder->Run();
 
 	return signCircles;
 }
@@ -47,7 +55,7 @@ Mat3b RoadSignsDetector::CreateResultMatrix(Mat &src)
 	return res;
 }
 
-void RoadSignsDetector::DisplaySigns(Mat &src, Mat &res, vector<SimpleCircle> &signCircles, string &imageFileName)
+void RoadSignsDetector::DisplaySigns(Mat &src, Mat &res, vector<SimpleCircle> &signCircles, string &imageFilePath)
 {
 
 	Mat srcForCircleExtraction = src.clone();
@@ -71,7 +79,7 @@ void RoadSignsDetector::DisplaySigns(Mat &src, Mat &res, vector<SimpleCircle> &s
 		circle(src, cv::Point(signCircles.at(i).center.x, signCircles.at(i).center.y), signCircles.at(i).radius, Scalar(255, 255, 255));
 
 
-		if (i < 10)
+		if (i < 50)
 		{
 
 			Mat circ =
@@ -79,9 +87,9 @@ void RoadSignsDetector::DisplaySigns(Mat &src, Mat &res, vector<SimpleCircle> &s
 
 			// write
 
-			string circleFileName = imageFileName + "_cicle" + to_string(i) + ".bmp";
+			string circleFileName = imageFilePath + "_cicle" + to_string(i) + ".bmp";
 
-			SignMatcher *signMatcher = new SignMatcher();
+			SignMatcher *signMatcher = new SignMatcher(imageFilePath);
 
 			SignRef matchedSign = signMatcher->GetMatchedSign(circ, i);
 
@@ -92,33 +100,17 @@ void RoadSignsDetector::DisplaySigns(Mat &src, Mat &res, vector<SimpleCircle> &s
 		}
 	}
 
-	//utils::DisplayMat(src, "srcCircles");
+	utils::DisplayMat(src, "srcCircles");
 
-
-	cv::resize(res, res, cv::Size(), 0.5, 0.5);
+	cv::resize(res, res, cv::Size(), 0.25, 0.25);
 	utils::DisplayMat(res, "final");
 
 
 	// write
-	string convertedFileName = imageFileName + "_signs.bmp";
-	utils::SaveFile(convertedFileName, res);
+	string signsFileName = "signs.bmp";
+
+	utils::SaveFile(signsFileName, res, sourceImageFileName);
 }
-
-void RoadSignsDetector::Run(string imageFileName)
-{
-	Mat  src = imread(imageFileName);
-
-	vector<SimpleCircle> signCircles =	this->FindCircles(src);
-
-	Mat3b res = this->CreateResultMatrix(src);
-
-	this->DisplaySigns(src, res, signCircles, imageFileName);
-
-	waitKey(0);
-}
-
-
-
 
 RoadSignsDetector::~RoadSignsDetector()
 {

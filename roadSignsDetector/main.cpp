@@ -4,11 +4,8 @@
 int main(int argc, char** argv)
 {
 	//TODO validate argument
+	RoadSignsDetector *rsd = new RoadSignsDetector(string(argv[1]));
 
-	string imageFileName(argv[1]);
-
-	RoadSignsDetector *rsd = new RoadSignsDetector();
-
-	rsd->Run(imageFileName);
+	rsd->Run();
 };
 
